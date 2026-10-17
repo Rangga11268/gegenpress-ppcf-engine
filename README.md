@@ -19,25 +19,32 @@ Pitch control models the continuous spatial probability that a given team will g
 $$PPCF_{\text{att}}(x, y) = \int_0^\infty f_B(t; x, y) \cdot P(\text{Att wins at } t \mid \text{Ball arrives at } t) \, dt$$
 
 Where:
-- $T_i(x, y) = \tau_i + t_{\text{run}}(d_i)$: Arrival time for player $i$, combining neuromuscular reaction latency $\tau_i$ (0.7s for outfielders, 0.5s for goalkeepers) and piecewise acceleration kinematics:
-  $$t_{\text{run}}(d) = \begin{cases} \sqrt{\frac{2d}{a_{\max}}}, & d \le d_{\text{accel}} \\\\ \frac{v_{\max}}{a_{\max}} + \frac{d - d_{\text{accel}}}{v_{\max}}, & d > d_{\text{accel}} \end{cases} \quad \text{where } d_{\text{accel}} = \frac{v_{\max}^2}{2 a_{\max}}$$
+- Arrival time $T_i(x, y) = \tau_i + t_{\text{run}}(d_i)$ for player $i$, combining neuromuscular reaction latency $\tau_i$ (0.7s for outfielders, 0.5s for goalkeepers) and piecewise acceleration kinematics:
+
+$$t_{\text{run}}(d) = \begin{cases} \sqrt{\frac{2d}{a_{\max}}}, & d \le d_{\text{accel}} \\ \frac{v_{\max}}{a_{\max}} + \frac{d - d_{\text{accel}}}{v_{\max}}, & d > d_{\text{accel}} \end{cases} \quad \text{where } d_{\text{accel}} = \frac{v_{\max}^2}{2 a_{\max}}$$
+
 - Rather than running 20-slice numerical Euler quadrature for all 22 players over 7,140 grid cells ($1.5 \times 10^7$ iterations taking ~2.5 seconds), our engine reformulates the time-to-intercept race into a vectorized competitive Poisson survival process using log-sum-exp soft-min integration:
-  $$T_{\text{team}}(x, y) = -\frac{1}{\beta} \ln \sum_{i \in \text{team}} \exp\left(-\beta (T_i - T_{\min})\right) + T_{\min}$$
-  $$PPCF_{\text{att}}(x, y) = \frac{1}{1 + \exp\left(-\beta (T_{\text{def}}(x, y) - T_{\text{att}}(x, y))\right)}$$
-  This reduces per-frame computational complexity from $O(N_{\text{players}} \cdot N_{\text{cells}} \cdot N_{\text{steps}})$ to pure SIMD array broadcasting ($O(1)$ Python calls, ~23 ms latency).
+
+$$T_{\text{team}}(x, y) = -\frac{1}{\beta} \ln \sum_{i \in \text{team}} \exp\left(-\beta (T_i - T_{\min})\right) + T_{\min}$$
+
+$$PPCF_{\text{att}}(x, y) = \frac{1}{1 + \exp\left(-\beta (T_{\text{def}}(x, y) - T_{\text{att}}(x, y))\right)}$$
+
+This reduces per-frame computational complexity from $O(N_{\text{players}} \cdot N_{\text{cells}} \cdot N_{\text{steps}})$ to pure SIMD array broadcasting ($O(1)$ Python calls, ~23 ms latency).
 
 ### 1.2 Spatial Dominance Collapse (Dominance Contraction Ratio / DCR)
 Quantifies the hallmark of Jurgen Klopp's Liverpool FC Gegenpressing—collapsing the opponent's controllable territory within a tight 3.0-second window following a turnover:
 
 $$DCR = \frac{\text{Area}_{\text{opp}}(t=0) - \text{Area}_{\text{opp}}(t=3.0)}{\text{Area}_{\text{opp}}(t=0)}$$
 
-- **Elite Gegenpress Threshold:** $DCR \ge 65.0\%$ within $\Delta t \le 3.5\text{s}$.
+- **Elite Gegenpress Threshold:** $\text{DCR} \ge 65.0\%$ within $\Delta t \le 3.5\text{s}$.
 - Measured on unmasked physical territory ($\text{PPCF}_{\text{opp}} > 0.5$).
 
 ### 1.3 Geometric Cover Shadow Passing Occlusion
 Models pressing players cutting off passing lanes toward downstream options:
 - An angular cone is cast from the pressed ball carrier $(x_{\text{ball}}, y_{\text{ball}})$ through the defender's effective reach envelope ($R_{\text{eff}} = 1.8\text{m}$):
-  $$\theta_{\text{shadow}} = 2 \arcsin\left(\frac{R_{\text{eff}}}{d_{\text{def}}}\right)$$
+
+$$\theta_{\text{shadow}} = 2 \arcsin\left(\frac{R_{\text{eff}}}{d_{\text{def}}}\right)$$
+
 - If an opposition receiver's relative bearing falls within $[\theta_{\text{def}} - \frac{\theta_{\text{shadow}}}{2}, \theta_{\text{def}} + \frac{\theta_{\text{shadow}}}{2}]$ and $d_{\text{tgt}} \ge d_{\text{def}}$, or if $d(\text{def}, \text{tgt}) \le R_{\text{eff}}$ (tight marking), the passing lane is occluded ($P_{\text{occlusion}} \to 1.0$).
 
 ### 1.4 Counter-Attack Risk Surface (CARS) & Sweeper Mitigation
@@ -45,7 +52,8 @@ High defensive lines compress midfield space but leave expansive acreage behind 
 1. **Gross Vulnerable Space:** Turf behind the defensive line ($x < x_{\text{line}}$).
 2. **Sweeper-Keeper Dominance:** Intercept race between an aggressive sweeper-keeper (e.g. Alisson Becker, starting $25\text{m}$ off his goal line) and sprinting counter-attacking forwards.
 3. **Sweeper Mitigation Rate:**
-   $$\text{Mitigation Rate} = \frac{\text{Area}_{\text{sweeper}} \cap \text{Vulnerable Space}}{\text{Vulnerable Space}} \times 100\%$$
+
+$$\text{Mitigation Rate} = \frac{\text{Area}_{\text{sweeper}} \cap \text{Vulnerable Space}}{\text{Vulnerable Space}} \times 100\%$$
 
 ### 1.5 Threat-Weighted Pitch Control (TWPC)
 Couples physical dominance fields with Karun Singh's Expected Threat ($xT$) matrix:
@@ -67,7 +75,7 @@ Evaluated on Python 3.12 (Native CPU, 105m $\times$ 68m FIFA regulation pitch, 7
 | **Broadcasting Speedup** | $> 10\times$ vs nested loops | **$409.2\times$** | Vectorized SIMD vs naive loop |
 | **Spatial Dominance Contraction (DCR)** | $\ge 65.0\%$ (Elite Press) | **$68.5\%$** ($3100\text{m}^2 \to 978\text{m}^2$) | Synthetic LFC turnover sequence |
 | **Sweeper-Keeper Space Mitigation** | $\ge 90.0\%$ | **$100.0\%$** ($1700\text{m}^2 / 1700\text{m}^2$) | Alisson Becker sweeping sweep |
-| **Automated Test Suite** | $100\%$ Pass Rate | **29 / 29 Passed (100%)** | `pytest tests/` |
+| **Automated Test Suite** | 100% Pass Rate | **29 / 29 Passed (100%)** | `pytest tests/` |
 
 ---
 
