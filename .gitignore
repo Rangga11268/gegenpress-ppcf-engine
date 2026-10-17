@@ -1,0 +1,54 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environments
+.venv/
+venv/
+ENV/
+env/
+
+# Testing and Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+test_results*.json
+TEST_*.md
+
+# AI / Agent workspace artifacts (keep repo clean for reviewers)
+.agents/
+AGENTS.md
+ORIGINAL_REQUEST.md
+stat
+*.log
+
+# IDE & OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Media and large binary outputs
+*.mp4
+*.avi
+*.mov
