@@ -82,10 +82,15 @@ Evaluated on Python 3.12 (Native CPU, 105m $\times$ 68m FIFA regulation pitch, 7
 | **Median Per-Frame Latency** | $< 50.0\text{ ms}$ | **$23.75\text{ ms}$** | `benchmarks/benchmark_engine.py` |
 | **Tail Latency (P95)** | $< 65.0\text{ ms}$ | **$27.22\text{ ms}$** | `benchmarks/benchmark_engine.py` |
 | **Throughput (FPS)** | $\ge 25.0\text{ FPS}$ (Broadcast) | **$42.1\text{ FPS}$** | Multi-frame tracking stream |
-| **Broadcasting Speedup** | $> 10\times$ vs nested loops | **$409.2\times$** | Vectorized SIMD vs naive loop |
+| **Broadcasting Speedup** | $> 10\times$ vs nested loops | **$409.2\times$** | Vectorized SIMD vs naive Python nested loop |
 | **Spatial Dominance Contraction (DCR)** | $\ge 65.0\%$ (Elite Press) | **$68.5\%$** ($3100\text{m}^2 \to 978\text{m}^2$) | Synthetic LFC turnover sequence |
 | **Sweeper-Keeper Space Mitigation** | $\ge 90.0\%$ | **$100.0\%$** ($1700\text{m}^2 / 1700\text{m}^2$) | Alisson Becker sweeping sweep |
 | **Automated Test Suite** | 100% Pass Rate | **29 / 29 Passed (100%)** | `pytest tests/` |
+
+> [!NOTE]
+> **Experimental Context & Baseline Definition:**
+> * **Speedup Baseline Definition:** The $409.2\times$ acceleration compares the vectorized 4D NumPy SIMD log-sum-exp tensor broadcasting ($23.75\text{ ms}$) against a standard pure-Python nested loop (`naive_unvectorized_ppcf` iterating cell-by-cell and player-by-player over 7,140 cells, taking ~9.7 seconds/frame on a standard x86_64 CPU).
+> * **Dataset & Tactical Tracking Context:** The DCR and tactical metrics are evaluated on synthetic high-fidelity Liverpool FC turnover trajectories modeled after Metrica Sports open tracking schema coordinates. While calibrated to empirical Spearman (2018) physical parameters ($v_{\max} = 7.0\text{ m/s}, a_{\max} = 4.0\text{ m/s}^2$), metrics in match analysis will vary according to pitch condition and camera calibration noise.
 
 ---
 
