@@ -1,9 +1,19 @@
-# GegenPress-PPCF: Vectorized Potential Pitch Control & Counter-Attack Risk Surface Engine
+<p align="center">
+  <img src="assets/logo.svg" alt="GegenPress Engine Logo" width="130" height="130">
+</p>
 
-[![CI](https://github.com/Rangga11268/gegenpress-ppcf-engine/actions/workflows/ci.yml/badge.svg)](https://github.com/Rangga11268/gegenpress-ppcf-engine/actions/workflows/ci.yml)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Code Style: Clean](https://img.shields.io/badge/architecture-zero--docker%20%7C%20cross--platform-emerald.svg)]()
+<h1 align="center">GegenPress-PPCF</h1>
+<p align="center">
+  <strong>Vectorized Potential Pitch Control & Counter-Attack Risk Surface Engine</strong><br>
+  <em>Spearman Pitch Control (PPCF) and Dominance Contraction Ratio (DCR) modeling elite Gegenpressing tactics.</em>
+</p>
+
+<p align="center">
+  <a href="https://github.com/Rangga11268/gegenpress-ppcf-engine/actions/workflows/ci.yml"><img src="https://github.com/Rangga11268/gegenpress-ppcf-engine/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue.svg" alt="Python Version"></a>
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
+  <a href="#"><img src="https://img.shields.io/badge/architecture-zero--docker%20%7C%20cross--platform-emerald.svg" alt="Architecture"></a>
+</p>
 
 High-throughput, real-time spatial sports analytics engine modeling elite Gegenpressing tactics and high-defensive-line exposure. Built upon Dr. William Spearman's Potential Pitch Control Field (PPCF) framework (MIT Sloan Sports Analytics Conference, 2018), this engine vectorizes 4D trajectory dynamics via NumPy broadcasting and Poisson survival integration to achieve real-time broadcast throughput (>40 FPS on standard CPUs, 409.2x speedup) without GPU or Docker dependencies.
 

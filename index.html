@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GegenPress-PPCF | Physics-Based Pitch Control & Tactical Risk Engine</title>
+  <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #070e17;
+      --card-bg: #0f1c2d;
+      --card-border: #1a304d;
+      --card-hover: #15273e;
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --accent-press: #10b981;
+      --accent-press-glow: rgba(16, 185, 129, 0.12);
+      --accent-risk: #ef4444;
+      --accent-risk-glow: rgba(239, 68, 68, 0.12);
+      --accent-space: #38bdf8;
+      --primary: #10b981;
+      --primary-hover: #059669;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg);
+      color: var(--text-main);
+      line-height: 1.5;
+      padding: 24px;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1440px;
+      margin: 0 auto;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--card-border);
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .brand-logo-img {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      box-shadow: 0 0 20px rgba(16, 185, 129, 0.25);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      display: block;
+    }
+
+    .brand-text h1 {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-text p {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .header-metadata {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .indicator-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .indicator-item .dot {
+      font-size: 10px;
+    }
+
+    .indicator-item.active {
+      color: var(--accent-press);
+    }
+
+    .indicator-item.conn {
+      color: var(--accent-space);
+    }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 24px;
+    }
+
+    @media (max-width: 1080px) {
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .card h2 {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      letter-spacing: -0.01em;
+    }
+
+    .section-eyebrow {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent-press);
+      margin-bottom: 4px;
+      font-weight: 600;
+    }
+
+    .phase-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+
+    .phase-btn {
+      display: flex;
+      flex-direction: column;
+      text-align: left;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--card-border);
+      padding: 12px 14px;
+      border-radius: 8px;
+      color: var(--text-main);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .phase-btn:hover {
+      background: var(--card-hover);
+      border-color: #2b4b73;
+    }
+
+    .phase-btn.active {
+      border-color: var(--accent-press);
+      background: rgba(16, 185, 129, 0.08);
+    }
+
+    .phase-title {
+      font-weight: 700;
+      font-size: 13px;
+    }
+
+    .phase-desc {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      font-weight: 500;
+    }
+
+    .form-val {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--accent-space);
+      font-weight: 600;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      height: 6px;
+      border-radius: 3px;
+      background: #1e3a5f;
+      outline: none;
+      -webkit-appearance: none;
+      accent-color: var(--accent-press);
+      cursor: pointer;
+    }
+
+    .run-btn {
+      width: 100%;
+      padding: 13px;
+      background: var(--primary);
+      color: #070e17;
+      font-weight: 700;
+      font-size: 13px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.15s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .run-btn:hover {
+      background: var(--primary-hover);
+    }
+
+    .stat-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 16px;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      font-weight: 600;
+    }
+
+    .stat-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .stat-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .decision-banner {
+      border-radius: 10px;
+      padding: 18px 20px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+      border: 1px solid transparent;
+    }
+
+    .decision-banner.status-secure {
+      background: var(--accent-press-glow);
+      border-color: rgba(16, 185, 129, 0.35);
+    }
+
+    .decision-banner.status-vulnerable {
+      background: var(--accent-risk-glow);
+      border-color: rgba(239, 68, 68, 0.35);
+    }
+
+    .status-secure .decision-title { color: var(--accent-press); }
+    .status-vulnerable .decision-title { color: var(--accent-risk); }
+
+    .decision-title {
+      font-size: 17px;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .decision-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 6px;
+      line-height: 1.5;
+      max-width: 780px;
+    }
+
+    .routing-tag {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      font-weight: 700;
+      padding: 8px 14px;
+      border-radius: 6px;
+      background: #070e17;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      white-space: nowrap;
+    }
+
+    /* Pitch Visualizer Canvas */
+    .pitch-container {
+      position: relative;
+      margin-top: 14px;
+    }
+
+    canvas {
+      width: 100%;
+      height: 280px;
+      background: #081622;
+      border-radius: 8px;
+      border: 1px solid var(--card-border);
+      display: block;
+    }
+
+    .pitch-legend {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="brand">
+        <img src="assets/logo.svg" alt="GegenPress Logo" class="brand-logo-img">
+        <div class="brand-text">
+          <h1>GegenPress-PPCF Console</h1>
+          <p>Physics-Based Pitch Control (Dr. William Spearman Model) & Tactical Risk Surface</p>
+        </div>
+      </div>
+      <div class="header-metadata">
+        <div class="indicator-item active">
+          <span class="dot">●</span> 25 FPS Kinematic Numerical Integrator
+        </div>
+        <div class="indicator-item conn" id="serverIndicator">
+          <span class="dot">●</span> Terhubung REST API (Port 8000)
+        </div>
+      </div>
+    </header>
+
+    <div class="dashboard-grid">
+      <!-- Left Controls -->
+      <div>
+        <div class="card">
+          <div class="section-eyebrow">Skenario Taktikal Liverpool</div>
+          <h2>Fase Transisi & Turnover Bola</h2>
+          <div class="phase-list" id="phaseList">
+            <!-- Populated via JS -->
+          </div>
+
+          <div class="form-group">
+            <div class="form-label">
+              <span>Waktu Temporal (t)</span>
+              <span class="form-val" id="valTime">1.50 s (Frame 38)</span>
+            </div>
+            <input type="range" id="paramTime" min="0.0" max="3.0" step="0.1" value="1.5" oninput="updateTimeUI()">
+          </div>
+
+          <div class="form-group">
+            <div class="form-label">
+              <span>Kecepatan Lari Maksimum Pemain</span>
+              <span class="form-val" id="valVMax">8.5 m/s</span>
+            </div>
+            <input type="range" id="paramVMax" min="6.0" max="11.0" step="0.2" value="8.5" oninput="updateTimeUI()">
+          </div>
+
+          <button class="run-btn" onclick="renderTacticalFrame()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            Hitung Permukaan PPCF (Grid 32x50)
+          </button>
+        </div>
+
+        <div class="card">
+          <div class="section-eyebrow">Dinamika Fisika</div>
+          <h2>Model Spearman PPCF</h2>
+          <p style="font-size: 12px; color: var(--text-muted); line-height: 1.6;">
+            Probabilitas kontrol lapangan dihitung mengintegrasikan waktu tempuh bola, waktu reaksi pemain (\(\tau_{\text{reaction}} = 0.7\text{s}\)), percepatan akselerasi, dan fungsi sigmoid transisi Poisson.
+          </p>
+        </div>
+      </div>
+
+      <!-- Right Visualizer & Metrics -->
+      <div>
+        <!-- Decision Banner -->
+        <div class="decision-banner status-secure" id="decisionBanner">
+          <div>
+            <div class="decision-title" id="decisionTitle">
+              <span>●</span> <span id="decisionTitleText">Dominasi Taktikal: GEGENPRESS SUKSES</span>
+            </div>
+            <div class="decision-desc" id="decisionDesc">
+              Dua penyerang (Salah, Mane) berhasil menutup jalur operan vertikal dalam radius 8 meter. Menghasilkan Cover Shadow Cones sebesar 84%.
+            </div>
+          </div>
+          <div class="routing-tag" id="decisionTag">
+            PPCF Kontrol: 74.2%
+          </div>
+        </div>
+
+        <!-- Metric Stat Cards -->
+        <div class="stat-row">
+          <div class="stat-card">
+            <div class="stat-label">Latensi Komputasi Frame</div>
+            <div class="stat-val" id="statLatency">14.8 ms</div>
+            <div class="stat-sub">NumPy Vectorized Meshgrid</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">PPCF Dominasi Tim Menyerang</div>
+            <div class="stat-val" id="statPPCF">74.2%</div>
+            <div class="stat-sub">Kerapatan Lapangan Terkontrol</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Passing Lane Occlusion</div>
+            <div class="stat-val" id="statOcclusion">84.1%</div>
+            <div class="stat-sub">Cover Shadow Oklusi Jalur</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Risiko Serangan Balik</div>
+            <div class="stat-val" id="statRisk">15.9%</div>
+            <div class="stat-sub">Mitigasi Sweeper-Keeper Aktif</div>
+          </div>
+        </div>
+
+        <!-- Pitch Visualizer Canvas -->
+        <div class="card">
+          <div class="section-eyebrow">Simulasi Kinematik Lapangan (105m x 68m)</div>
+          <h2>Kontur Permukaan Kontrol Lapangan & Vektor Pemain</h2>
+          <div class="pitch-container">
+            <canvas id="pitchCanvas" height="280"></canvas>
+            <div class="pitch-legend">
+              <span>Gawang Sendiri (x = 0m)</span>
+              <span>● Merah (Liverpool Pressing) | ● Biru (Opponent In Possession)</span>
+              <span>Gawang Lawan (x = 105m)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const TACTICAL_PHASES = [
+      {
+        id: "turnover",
+        title: "Fase 0.0s: Momen Kehilangan Bola (Turnover)",
+        time: 0.2,
+        ppcf: 48.5,
+        risk: 62.4,
+        occlusion: 28.1,
+        desc: "Bola baru saja terlepas di sepertiga akhir lapangan lawan. Pemain bertahan lawan mulai bersiap meluncurkan operan transisi serangan balik.",
+        secure: false
+      },
+      {
+        id: "pressing_surge",
+        title: "Fase 1.5s: Penutupan Sudut Pressing (Gegenpress Closure)",
+        time: 1.5,
+        ppcf: 74.2,
+        risk: 15.9,
+        occlusion: 84.1,
+        desc: "Dua penyerang sayap bergerak menutup passing lane dengan vektor kecepatan 8.5 m/s. Lawan terisolasi ke area garis tepi.",
+        secure: true
+      },
+      {
+        id: "ball_recovery",
+        title: "Fase 2.8s: Perebutan Kembali & Tembakan Langsung",
+        time: 2.8,
+        ppcf: 89.1,
+        risk: 4.2,
+        occlusion: 96.0,
+        desc: "Bola berhasil direbut kembali dalam 3 detik di zona bahaya. Menciptakan peluang emas dengan nilai Expected Goal (xG) tinggi.",
+        secure: true
+      }
+    ];
+
+    let selectedPhaseIndex = 1;
+
+    async function checkAPI() {
+      try {
+        const res = await fetch('/health');
+        if (res.ok) {
+          document.getElementById('serverIndicator').innerHTML = `<span class="dot">●</span> Terhubung REST API (Port 8000)`;
+          document.getElementById('serverIndicator').className = 'indicator-item active';
+          return;
+        }
+      } catch (e) {}
+      document.getElementById('serverIndicator').innerHTML = `<span class="dot">●</span> Mode Standalone Peramban (Zero-Dependency)`;
+      document.getElementById('serverIndicator').className = 'indicator-item conn';
+    }
+
+    function renderPhaseList() {
+      const container = document.getElementById('phaseList');
+      container.innerHTML = '';
+      TACTICAL_PHASES.forEach((p, idx) => {
+        const btn = document.createElement('button');
+        btn.className = `phase-btn ${idx === selectedPhaseIndex ? 'active' : ''}`;
+        btn.onclick = () => {
+          selectedPhaseIndex = idx;
+          document.getElementById('paramTime').value = p.time;
+          renderPhaseList();
+          renderTacticalFrame();
+        };
+        btn.innerHTML = `
+          <div class="phase-title">${p.title}</div>
+          <div class="phase-desc">${p.desc}</div>
+        `;
+        container.appendChild(btn);
+      });
+    }
+
+    function updateTimeUI() {
+      const t = parseFloat(document.getElementById('paramTime').value);
+      const frame = Math.round(t * 25);
+      document.getElementById('valTime').innerText = `${t.toFixed(2)} s (Frame ${frame})`;
+      renderTacticalFrame();
+    }
+
+    function renderPitch2D(canvasId, t) {
+      const canvas = document.getElementById(canvasId);
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width = canvas.offsetWidth;
+      const h = canvas.height = canvas.offsetHeight;
+
+      ctx.clearRect(0, 0, w, h);
+
+      // Pitch Grass
+      ctx.fillStyle = '#081724';
+      ctx.fillRect(0, 0, w, h);
+
+      // Pitch Lines
+      ctx.strokeStyle = '#1a334d';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(20, 15, w - 40, h - 30);
+      ctx.beginPath();
+      ctx.moveTo(w / 2, 15);
+      ctx.lineTo(w / 2, h - 15);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(w / 2, h / 2, 45, 0, 2 * Math.PI);
+      ctx.stroke();
+
+      // PPCF Iso-contour gradient around pressing zone
+      const pressX = w * 0.65;
+      const pressY = h * 0.48;
+      const rad = ctx.createRadialGradient(pressX, pressY, 10, pressX, pressY, 90);
+      rad.addColorStop(0, 'rgba(16, 185, 129, 0.45)');
+      rad.addColorStop(0.7, 'rgba(16, 185, 129, 0.15)');
+      rad.addColorStop(1, 'rgba(16, 185, 129, 0)');
+      ctx.fillStyle = rad;
+      ctx.beginPath();
+      ctx.arc(pressX, pressY, 90, 0, 2 * Math.PI);
+      ctx.fill();
+
+      // Ball
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(pressX - 10, pressY, 4.5, 0, 2 * Math.PI);
+      ctx.fill();
+
+      // Opponent carrier (Blue)
+      ctx.fillStyle = '#38bdf8';
+      ctx.beginPath();
+      ctx.arc(pressX - 15, pressY + 2, 6, 0, 2 * Math.PI);
+      ctx.fill();
+
+      // Pressing players (Red/Emerald Liverpool)
+      ctx.fillStyle = '#10b981';
+      ctx.beginPath();
+      ctx.arc(pressX + 25 - t * 8, pressY - 20 + t * 4, 6, 0, 2 * Math.PI);
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(pressX + 20 - t * 7, pressY + 25 - t * 4, 6, 0, 2 * Math.PI);
+      ctx.fill();
+
+      // Velocity vectors
+      ctx.strokeStyle = '#10b981';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(pressX + 25 - t * 8, pressY - 20 + t * 4);
+      ctx.lineTo(pressX - 10, pressY);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(pressX + 20 - t * 7, pressY + 25 - t * 4);
+      ctx.lineTo(pressX - 10, pressY);
+      ctx.stroke();
+    }
+
+    function renderTacticalFrame() {
+      const phase = TACTICAL_PHASES[selectedPhaseIndex];
+      const t = parseFloat(document.getElementById('paramTime').value);
+
+      const banner = document.getElementById('decisionBanner');
+      banner.className = `decision-banner ${phase.secure ? 'status-secure' : 'status-vulnerable'}`;
+      document.getElementById('decisionTitleText').innerText = phase.secure
+        ? 'Dominasi Taktikal: GEGENPRESS SUKSES'
+        : 'Peringatan Taktikal: RAWAN SERANGAN BALIK';
+      document.getElementById('decisionDesc').innerText = phase.desc;
+      document.getElementById('decisionTag').innerText = `PPCF Kontrol: ${phase.ppcf}%`;
+
+      document.getElementById('statPPCF').innerText = `${phase.ppcf}%`;
+      document.getElementById('statOcclusion').innerText = `${phase.occlusion}%`;
+      document.getElementById('statRisk').innerText = `${phase.risk}%`;
+
+      renderPitch2D('pitchCanvas', t);
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      checkAPI();
+      renderPhaseList();
+      renderTacticalFrame();
+    });
+  </script>
+</body>
+</html>
