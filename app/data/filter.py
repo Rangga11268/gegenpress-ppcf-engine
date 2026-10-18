@@ -6,7 +6,26 @@ velocities and accelerations.
 
 from typing import Tuple
 import numpy as np
-from scipy.signal import savgol_filter
+
+try:
+    from scipy.signal import savgol_filter
+    HAS_SCIPY = True
+except (ImportError, MemoryError):
+    HAS_SCIPY = False
+
+    def savgol_filter(x, window_length, polyorder, deriv=0, delta=1.0):
+        """Pure NumPy fallback for Savitzky-Golay when SciPy DLL cannot allocate memory."""
+        if deriv == 0:
+            # Moving average fallback
+            kernel = np.ones(window_length) / window_length
+            pad_width = window_length // 2
+            x_pad = np.pad(x, pad_width, mode='edge')
+            return np.convolve(x_pad, kernel, mode='valid')
+        elif deriv == 1:
+            return np.gradient(x, delta)
+        elif deriv == 2:
+            return np.gradient(np.gradient(x, delta), delta)
+        return x
 
 
 class TrajectoryFilter:
