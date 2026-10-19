@@ -209,4 +209,18 @@ class TestPPCFEngine:
         )
         assert np.isclose(line_x, 97.0), f"Offside line must be at ball position 97.0, got {line_x}"
 
+    def test_attack_direction_validation(self, engine):
+        """attack_direction must be strictly 1 or -1."""
+        def_pos = np.array([[95.0, 34.0], [80.0, 25.0]])
+        with pytest.raises(ValueError, match="attack_direction must be strictly 1 or -1"):
+            engine.calculate_offside_line(def_pos, attack_direction=0)
+
+        with pytest.raises(ValueError, match="attack_direction must be strictly 1 or -1"):
+            engine.calculate_offside_line(def_pos, attack_direction=2)
+
+        frame = FrameData(0, 0.0, (50.0, 34.0), (0.0, 0.0), [])
+        with pytest.raises(ValueError, match="attack_direction must be strictly 1 or -1"):
+            engine.compute_frame_ppcf(frame, attack_direction=0)
+
+
 

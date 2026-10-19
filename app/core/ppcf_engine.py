@@ -129,6 +129,9 @@ class PPCFEngine:
         float
             The x-coordinate of the offside line in meters.
         """
+        if attack_direction not in (-1, 1):
+            raise ValueError(f"attack_direction must be strictly 1 or -1, got {attack_direction}")
+
         halfway_x = (self.pitch_cfg.x_min + self.pitch_cfg.x_max) / 2.0
 
         if len(defending_positions) < 2:
@@ -181,6 +184,9 @@ class PPCFEngine:
         PPCFResult
             Complete computed pitch control surface and tactical metrics.
         """
+        if attack_direction not in (-1, 1):
+            raise ValueError(f"attack_direction must be strictly 1 or -1, got {attack_direction}")
+
         if not np.all(np.isfinite(frame.ball_position)):
             raise ValueError(f"Ball position must contain finite numbers, got {frame.ball_position}")
         if not np.all(np.isfinite(frame.ball_velocity)):
