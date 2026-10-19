@@ -79,22 +79,23 @@ Evaluated on Python 3.12 (Native CPU, 105m $\times$ 68m FIFA regulation pitch, 7
 | Metric | Target Specification | Achieved Result | Evaluation Method |
 | :--- | :---: | :---: | :--- |
 | **Grid Resolution** | $1.0\text{m} \times 1.0\text{m}$ | **$105 \times 68$ (7,140 cells)** | Exact FIFA Standard |
-| **Median Per-Frame Latency** | $< 50.0\text{ ms}$ | **$23.75\text{ ms}$** | `benchmarks/benchmark_engine.py` |
-| **Tail Latency (P95)** | $< 65.0\text{ ms}$ | **$27.22\text{ ms}$** | `benchmarks/benchmark_engine.py` |
-| **Throughput (FPS)** | $\ge 25.0\text{ FPS}$ (Broadcast) | **$42.1\text{ FPS}$** | Multi-frame tracking stream |
-| **Broadcasting Speedup** | $> 10\times$ vs nested loops | **$409.2\times$** | Vectorized SIMD vs naive Python nested loop |
+| **Median Per-Frame Latency** | $< 50.0\text{ ms}$ | **$26.64\text{ ms}$** (Min: 22.50 ms, Mean: 27.01 ms) | `benchmarks/benchmark_engine.py` (50 trials) |
+| **Tail Latency (P95 / P99)** | $< 65.0\text{ ms}$ | **$31.33\text{ ms}$ / $32.63\text{ ms}$** | `benchmarks/benchmark_engine.py` |
+| **Throughput (FPS)** | $\ge 25.0\text{ FPS}$ (Broadcast) | **$37.5\text{ FPS}$** (Median) | Real-time broadcast standard verified |
+| **Broadcasting Speedup** | $> 10\times$ vs nested loops | **$107.5\times$** (vs 2,863.6 ms scalar loop) | Vectorized SIMD vs naive Python nested loop |
+| **Numerical Parity (MAE)** | $< 10^{-4}$ vs Reference | **$2.27 \times 10^{-18}$** (Max: $4.44 \times 10^{-16}$) | Automated parity audit against Spearman loop |
 | **Spatial Dominance Contraction (DCR)** | $\ge 65.0\%$ (Elite Press) | **$68.5\%$** ($3100\text{m}^2 \to 978\text{m}^2$) | Synthetic LFC turnover sequence |
 | **Sweeper-Keeper Space Mitigation** | $\ge 90.0\%$ | **$100.0\%$** ($1700\text{m}^2 / 1700\text{m}^2$) | Alisson Becker sweeping sweep |
-| **Automated Test Suite** | 100% Pass Rate | **39 / 39 Passed (100%)** | `pytest tests/` |
+| **Automated Test Suite** | 100% Pass Rate | **45 / 45 Passed (100%)** | `pytest tests/` (kinematics, PPCF, Law 11, edge cases) |
 
 > [!NOTE]
 > **Experimental Context & Baseline Definition:**
-> * **Speedup Baseline Definition:** The $409.2\times$ acceleration compares the vectorized 4D NumPy SIMD log-sum-exp tensor broadcasting ($23.75\text{ ms}$, variance $\sigma^2 \approx 2.4\text{ ms}^2$) against a standard pure-Python nested loop (`naive_unvectorized_ppcf` iterating cell-by-cell and player-by-player over 7,140 cells, taking ~9.7 seconds/frame on a standard x86_64 CPU).
+> * **Speedup Baseline Definition:** The $107.5\times$ acceleration compares vectorized 4D NumPy SIMD log-sum-exp tensor broadcasting ($26.64\text{ ms}$, variance $\sigma^2 = 7.32\text{ ms}^2$, std $\pm 2.71\text{ ms}$) against a standard pure-Python nested loop (`naive_unvectorized_ppcf` iterating cell-by-cell and player-by-player over 7,140 cells, taking ~2.86 seconds/frame on a standard x86_64 CPU).
 > * **Dataset & Tactical Tracking Context:** The DCR and tactical metrics are evaluated on synthetic high-fidelity Liverpool FC turnover trajectories modeled after Metrica Sports open tracking schema coordinates. While calibrated to empirical Spearman (2018) physical parameters ($v_{\max} = 7.0\text{ m/s}, a_{\max} = 4.0\text{ m/s}^2$), metrics in match analysis will vary according to pitch condition and camera calibration noise.
 > * **Physical Boundaries & Real-World Tracking Assumptions:**
->   1. **Kinematic Bounds:** Players accelerate smoothly up to $v_{\max} = 7.0\text{ m/s}$ with maximum continuous acceleration $a_{\max} = 4.0\text{ m/s}^2$. Turn dynamics assume an isotropic deceleration-acceleration profile.
->   2. **Optical Tracking Smoothing:** Real-world broadcast computer vision suffers from occlusion, jitter, and camera parallax ($10-25\text{ Hz}$). Raw optical tracking should pass through a Savitzky-Golay filter or Kalman smoother prior to velocity derivation to eliminate velocity spikes.
->   3. **Reaction Delay Window ($\tau$):** Set to $\tau = 0.7\text{ s}$ for outfield players and $\tau = 0.3\text{ s}$ for goalkeepers. Position is forward-projected to $r_{\text{react}} = r + v\tau$, with arrival times evaluated as $t_{\text{arrival}} = \tau + t_{\text{travel}}(d(r_{\text{react}}, \text{target}))$.
+>   1. **Kinematic Bounds & Time Frame Consistency:** A player starting at position $r$ with velocity $v$ spends neuromuscular delay $\tau$ continuing along their current velocity vector to reach $r_{\text{react}} = r + v\tau$ at clock time $t = \tau$. Only at $t = \tau$ does the player actively begin sprinting toward the destination target covering distance $d = \|r_{\text{target}} - r_{\text{react}}\|$. The sprint travel time $t_{\text{run}}(d)$ brings the total arrival time from $t=0$ to $t_{\text{arrival}} = \tau + t_{\text{run}}(d)$. Reaction latency $\tau$ is never counted twice; it anchors the temporal origin of the active sprint phase to ensure conservation of physical time.
+>   2. **Optical Tracking Smoothing:** Real-world broadcast computer vision suffers from occlusion, jitter, and camera parallax ($10-25\text{ Hz}$). Raw optical tracking in `app/data/filter.py` passes through a Savitzky-Golay filter (window length 7, polynomial order 2) to eliminate derivative velocity noise spikes prior to PPCF calculation.
+>   3. **Reaction Latency Values:** Set to $\tau = 0.7\text{ s}$ for outfield players and $\tau = 0.3\text{ s}$ for goalkeepers based on empirical sports science reaction baselines.
 
 ---
 

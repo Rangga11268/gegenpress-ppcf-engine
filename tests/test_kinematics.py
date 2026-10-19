@@ -72,3 +72,35 @@ class TestKinematics:
         t_ball = compute_ball_travel_time(targets, ball_pos, DEFAULT_PHYSICS)
         assert np.isclose(t_ball[0, 0], 1.0)
         assert np.isclose(t_ball[0, 1], 2.0)
+
+    def test_kinematic_time_frame_consistency(self):
+        """Verifies Spearman (2018) physical time-frame consistency.
+        
+        Reaction position r_react = r + v*tau represents player position at t = tau.
+        Sprinting begins at t = tau towards target r_target covering distance d = ||r_target - r_react||.
+        Hence t_arrival = tau + t_run(d) is the single coherent physical clock time.
+        """
+        r0 = np.array([40.0, 30.0])
+        v0 = np.array([2.0, 0.0])
+        tau = 0.7
+        r_target = np.array([55.0, 30.0])
+
+        r_react = compute_reaction_position(r0, v0, tau)
+        # In tau=0.7s at 2m/s, player displaces 1.4m to x=41.4m
+        assert np.allclose(r_react, [41.4, 30.0])
+
+        dist_to_target = float(np.linalg.norm(r_target - r_react))
+        assert np.isclose(dist_to_target, 13.6)
+
+        t_arr = compute_player_arrival_time(np.array([dist_to_target]), tau, DEFAULT_PHYSICS)
+        # d_accel = 8^2 / (2*4) = 8.0m (taking 2.0s). Remaining 5.6m at 8m/s takes 0.7s.
+        # t_run = 2.0 + 0.7 = 2.7s. Total t_arr = 0.7 (reaction delay) + 2.7 (sprint) = 3.4s.
+        assert np.isclose(t_arr[0], 3.4)
+
+    def test_kinematic_negative_distance_clamped(self):
+        """Negative distances must be safely clamped to zero."""
+        d_neg = np.array([-5.0, 0.0])
+        t_arr = compute_player_arrival_time(d_neg, 0.7, DEFAULT_PHYSICS)
+        assert np.isclose(t_arr[0], 0.7)
+        assert np.isclose(t_arr[1], 0.7)
+

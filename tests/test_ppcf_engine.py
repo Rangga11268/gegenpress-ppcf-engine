@@ -222,5 +222,68 @@ class TestPPCFEngine:
         with pytest.raises(ValueError, match="attack_direction must be strictly 1 or -1"):
             engine.compute_frame_ppcf(frame, attack_direction=0)
 
+    def test_single_player_vs_n_players(self, engine):
+        """1 attacking player vs 10 defenders maintains probability conservation and local control."""
+        att = [PlayerFrame("att_lone", "att", (25.0, 34.0), (0.0, 0.0))]
+        defs = [
+            PlayerFrame(f"def_{i}", "def", (60.0 + (i % 3) * 5, 20.0 + (i // 3) * 10), (0.0, 0.0))
+            for i in range(10)
+        ]
+        frame = FrameData(1, 0.0, (25.0, 34.0), (0.0, 0.0), att + defs)
+        res = engine.compute_frame_ppcf(frame, apply_offside_mask=False)
+
+        # Probability conservation
+        assert np.allclose(res.ppcf_att + res.ppcf_def, 1.0, atol=1e-5)
+        # Lone attacker dominates their immediate cell
+        assert res.ppcf_att[34, 25] > 0.85
+        # Defenders dominate their territory
+        assert res.ppcf_def[34, 70] > 0.90
+
+    def test_overlapping_player_coordinates(self, engine):
+        """Attacker and defender at exact identical coordinates (duel/collision) resolves without NaN."""
+        players = [
+            PlayerFrame("att_duel", "att", (50.0, 34.0), (0.0, 0.0)),
+            PlayerFrame("def_duel", "def", (50.0, 34.0), (0.0, 0.0)),
+        ]
+        frame = FrameData(2, 0.0, (50.0, 34.0), (0.0, 0.0), players)
+        res = engine.compute_frame_ppcf(frame, apply_offside_mask=False)
+
+        assert np.all(np.isfinite(res.ppcf_att))
+        assert np.all(np.isfinite(res.ppcf_def))
+        # Identical location and kinematics -> exactly 50/50 control at that cell
+        assert np.isclose(res.ppcf_att[34, 50], 0.50, atol=1e-3)
+        assert np.isclose(res.ppcf_def[34, 50], 0.50, atol=1e-3)
+
+    def test_pitch_corner_boundary_coordinates(self, engine):
+        """Players located at pitch corners (0,0), (105,0), (0,68), (105,68) produce valid fields."""
+        corner_players = [
+            PlayerFrame("att_corner_bl", "att", (0.0, 0.0), (0.0, 0.0)),
+            PlayerFrame("att_corner_tl", "att", (0.0, 68.0), (0.0, 0.0)),
+            PlayerFrame("def_corner_br", "def", (105.0, 0.0), (0.0, 0.0)),
+            PlayerFrame("def_corner_tr", "def", (105.0, 68.0), (0.0, 0.0)),
+        ]
+        frame = FrameData(3, 0.0, (52.5, 34.0), (0.0, 0.0), corner_players)
+        res = engine.compute_frame_ppcf(frame, apply_offside_mask=False)
+
+        assert np.all(np.isfinite(res.ppcf_att))
+        assert np.all(np.isfinite(res.ppcf_def))
+        assert np.allclose(res.ppcf_att + res.ppcf_def, 1.0, atol=1e-5)
+
+    def test_symmetric_parity_across_halfway_line(self, engine):
+        """Symmetric player layout produces symmetric control across halfway line (x=52.5m)."""
+        players = [
+            PlayerFrame("att_sym", "att", (32.5, 34.0), (0.0, 0.0)),
+            PlayerFrame("def_sym", "def", (72.5, 34.0), (0.0, 0.0)),
+        ]
+        frame = FrameData(4, 0.0, (52.5, 34.0), (0.0, 0.0), players)
+        res = engine.compute_frame_ppcf(frame, apply_offside_mask=False)
+
+        # At the exact midpoint x=52.5m, y=34m, control should be exactly 50%
+        mid_x_idx = int(52.5)
+        mid_y_idx = int(34.0)
+        assert np.isclose(res.ppcf_att[mid_y_idx, mid_x_idx], 0.50, atol=0.01)
+        assert np.isclose(res.ppcf_def[mid_y_idx, mid_x_idx], 0.50, atol=0.01)
+
+
 
 

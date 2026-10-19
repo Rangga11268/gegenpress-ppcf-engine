@@ -130,25 +130,33 @@ def run_benchmark():
     print(f"      Naive Loop Coarse ({coarse_timing_pitch.total_cells} cells)  : {t_naive_coarse:.2f} ms")
     print(f"      Extrapolated Full (7,140 cells) : {extrapolated_naive_full:.2f} ms (~{extrapolated_naive_full/1000.0:.2f} s/frame)")
 
-    # Warmup
-    _ = engine.compute_frame_ppcf(test_frame)
+    # Multi-iteration Benchmark with Warmup
+    print("      Executing 10 warmup iterations...")
+    for _ in range(10):
+        _ = engine.compute_frame_ppcf(test_frame)
+
+    print("      Measuring 50 production iterations...")
     latencies = []
-    for _ in range(25):
+    for _ in range(50):
         t0 = time.perf_counter()
         _ = engine.compute_frame_ppcf(test_frame)
         latencies.append((time.perf_counter() - t0) * 1000.0)
 
+    min_vec = float(np.min(latencies))
     median_vec = float(np.median(latencies))
+    mean_vec = float(np.mean(latencies))
+    max_vec = float(np.max(latencies))
     std_vec = float(np.std(latencies))
     var_vec = float(np.var(latencies))
     p95_vec = float(np.percentile(latencies, 95))
+    p99_vec = float(np.percentile(latencies, 99))
     fps = 1000.0 / median_vec
     speedup = extrapolated_naive_full / median_vec
 
-    print(f"      Vectorized Median Latency       : {median_vec:.2f} ms")
-    print(f"      Vectorized Variance / StdDev    : {var_vec:.2f} ms² (±{std_vec:.2f} ms)")
-    print(f"      Vectorized P95 Latency          : {p95_vec:.2f} ms")
-    print(f"      Real-Time Throughput            : {fps:.1f} FPS")
+    print(f"      Latency Min / Median / Mean     : {min_vec:.2f} / {median_vec:.2f} / {mean_vec:.2f} ms")
+    print(f"      Latency Max / P95 / P99         : {max_vec:.2f} / {p95_vec:.2f} / {p99_vec:.2f} ms")
+    print(f"      Variance / StdDev               : {var_vec:.4f} ms^2 (+/- {std_vec:.2f} ms)")
+    print(f"      Real-Time Throughput            : {fps:.1f} FPS (Median)")
     print(f"      Effective Speedup Ratio         : {speedup:.1f}x")
 
     # Benchmark 3: Verification against Broadcast Real-Time Constraint
