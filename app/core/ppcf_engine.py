@@ -103,39 +103,59 @@ class PPCFEngine:
     def calculate_offside_line(
         self,
         defending_positions: np.ndarray,
-        defending_is_gk: np.ndarray,
+        defending_is_gk: Optional[np.ndarray] = None,
         attack_direction: int = 1,
+        ball_position: Optional[Tuple[float, float]] = None,
     ) -> float:
-        """Find the offside line defined by the second-to-last defender (Law 11).
+        """Find the offside line defined by the second-to-last defender (FIFA Law 11).
+
+        Incorporates FIFA Law 11 invariants:
+        1. A player cannot be offside in their own half (bounded by halfway line x = 52.5m).
+        2. A player cannot be offside if level with or behind the ball.
 
         Parameters
         ----------
         defending_positions : np.ndarray
             Array of shape (N_def, 2) of defending player positions.
-        defending_is_gk : np.ndarray
+        defending_is_gk : np.ndarray, optional
             Boolean array of shape (N_def,) indicating if defender is goalkeeper.
         attack_direction : int
             1 if attacking towards positive x (0 -> 105), -1 if towards negative x.
+        ball_position : tuple of (float, float), optional
+            (x, y) coordinates of the ball in meters.
 
         Returns
         -------
         float
             The x-coordinate of the offside line in meters.
         """
+        halfway_x = (self.pitch_cfg.x_min + self.pitch_cfg.x_max) / 2.0
+
         if len(defending_positions) < 2:
-            return self.pitch_cfg.x_max if attack_direction == 1 else self.pitch_cfg.x_min
-
-        x_coords = defending_positions[:, 0]
-
-        if attack_direction == 1:
-            # Attacking towards x=105: sort descending (deepest defenders have highest x)
-            sorted_x = np.sort(x_coords)[::-1]
-            # Second-to-last defender is index 1
-            offside_line = float(sorted_x[1])
+            offside_line = halfway_x
         else:
-            # Attacking towards x=0: sort ascending (deepest defenders have lowest x)
-            sorted_x = np.sort(x_coords)
-            offside_line = float(sorted_x[1])
+            x_coords = defending_positions[:, 0]
+            if attack_direction == 1:
+                # Attacking towards x=105: sort descending (deepest defenders have highest x)
+                sorted_x = np.sort(x_coords)[::-1]
+                # Second-to-last defender is index 1
+                offside_line = float(sorted_x[1])
+            else:
+                # Attacking towards x=0: sort ascending (deepest defenders have lowest x)
+                sorted_x = np.sort(x_coords)
+                offside_line = float(sorted_x[1])
+
+        # FIFA Law 11 Invariants:
+        # 1. Halfway line restriction: Cannot be offside in own defending half
+        # 2. Behind ball restriction: Offside line moves with ball if ball is closer to goal line
+        if attack_direction == 1:
+            offside_line = max(offside_line, halfway_x)
+            if ball_position is not None:
+                offside_line = max(offside_line, float(ball_position[0]))
+        else:
+            offside_line = min(offside_line, halfway_x)
+            if ball_position is not None:
+                offside_line = min(offside_line, float(ball_position[0]))
 
         return offside_line
 
@@ -161,6 +181,11 @@ class PPCFEngine:
         PPCFResult
             Complete computed pitch control surface and tactical metrics.
         """
+        if not np.all(np.isfinite(frame.ball_position)):
+            raise ValueError(f"Ball position must contain finite numbers, got {frame.ball_position}")
+        if not np.all(np.isfinite(frame.ball_velocity)):
+            raise ValueError(f"Ball velocity must contain finite numbers, got {frame.ball_velocity}")
+
         if not frame.players:
             # Empty frame fallback
             empty_half = np.full((self.n_y, self.n_x), 0.5, dtype=np.float64)
@@ -181,6 +206,13 @@ class PPCFEngine:
         is_gk_list = []
 
         for p in frame.players:
+            if p.team not in ("att", "def"):
+                raise ValueError(f"Player team must be 'att' or 'def', got '{p.team}' for player '{p.player_id}'")
+            if not np.all(np.isfinite(p.position)):
+                raise ValueError(f"Player position must contain finite numbers, got {p.position} for player '{p.player_id}'")
+            if not np.all(np.isfinite(p.velocity)):
+                raise ValueError(f"Player velocity must contain finite numbers, got {p.velocity} for player '{p.player_id}'")
+
             pos_list.append(p.position)
             vel_list.append(p.velocity)
             is_gk = p.is_goalkeeper
@@ -247,7 +279,7 @@ class PPCFEngine:
         # 9. Offside Line Calculation and Law 11 Masking
         def_pos = positions[~is_att]
         def_gk = is_gk_arr[~is_att]
-        offside_line = self.calculate_offside_line(def_pos, def_gk, attack_direction)
+        offside_line = self.calculate_offside_line(def_pos, def_gk, attack_direction, ball_position=frame.ball_position)
 
         if apply_offside_mask:
             # In offside zone, attacking players cannot legally receive or control the ball

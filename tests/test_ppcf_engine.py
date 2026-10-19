@@ -106,3 +106,57 @@ class TestPPCFEngine:
         # Defender at cell (y=34, x=80)
         assert res.ppcf_def[cell_y, int(80)] > 0.95
         assert res.ppcf_att[cell_y, int(80)] < 0.05
+
+    def test_offside_halfway_line_clamp(self, engine):
+        """FIFA Law 11: Offside line cannot cross halfway line (52.5m)."""
+        # Defenders deep in opponent's half (x < 52.5m)
+        def_pos = np.array([
+            [40.0, 34.0],  # GK
+            [30.0, 24.0],  # 2nd last defender at 30m
+        ])
+        line_x = engine.calculate_offside_line(def_pos, attack_direction=1)
+        assert np.isclose(line_x, 52.5), f"Expected halfway clamp 52.5, got {line_x}"
+
+        # Attacking right-to-left: defenders deep in opponent half (x > 52.5m)
+        def_pos_rev = np.array([
+            [70.0, 34.0],
+            [80.0, 24.0],
+        ])
+        line_rev = engine.calculate_offside_line(def_pos_rev, attack_direction=-1)
+        assert np.isclose(line_rev, 52.5), f"Expected halfway clamp 52.5, got {line_rev}"
+
+    def test_offside_behind_ball_restriction(self, engine):
+        """FIFA Law 11: If ball is ahead of 2nd last defender, offside line is at the ball."""
+        def_pos = np.array([
+            [100.0, 34.0],
+            [75.0, 24.0],  # 2nd last defender at 75m
+        ])
+        # Ball is at 82m (ahead of defender)
+        line_x = engine.calculate_offside_line(def_pos, attack_direction=1, ball_position=(82.0, 34.0))
+        assert np.isclose(line_x, 82.0)
+
+        # Attacking right-to-left: ball at 20m, 2nd defender at 30m
+        def_pos_rev = np.array([
+            [5.0, 34.0],
+            [30.0, 24.0],
+        ])
+        line_rev = engine.calculate_offside_line(def_pos_rev, attack_direction=-1, ball_position=(20.0, 34.0))
+        assert np.isclose(line_rev, 20.0)
+
+    def test_compute_frame_input_validation(self, engine):
+        """Rejects unknown player teams and non-finite position/velocity coordinates."""
+        invalid_team = [
+            PlayerFrame("p1", "neutral", (50.0, 34.0), (0.0, 0.0)),
+        ]
+        with pytest.raises(ValueError, match="team must be 'att' or 'def'"):
+            engine.compute_frame_ppcf(FrameData(0, 0.0, (50.0, 34.0), (0.0, 0.0), invalid_team))
+
+        nan_pos = [
+            PlayerFrame("p1", "att", (np.nan, 34.0), (0.0, 0.0)),
+        ]
+        with pytest.raises(ValueError, match="position must contain finite numbers"):
+            engine.compute_frame_ppcf(FrameData(0, 0.0, (50.0, 34.0), (0.0, 0.0), nan_pos))
+
+        with pytest.raises(ValueError, match="Ball position must contain finite numbers"):
+            engine.compute_frame_ppcf(FrameData(0, 0.0, (np.inf, 34.0), (0.0, 0.0), []))
+
