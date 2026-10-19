@@ -160,3 +160,53 @@ class TestPPCFEngine:
         with pytest.raises(ValueError, match="Ball position must contain finite numbers"):
             engine.compute_frame_ppcf(FrameData(0, 0.0, (np.inf, 34.0), (0.0, 0.0), []))
 
+    def test_incomplete_players_asymmetric_squads(self, engine):
+        """PPCF handles asymmetric squads (e.g. red card 10 vs 11) while conserving probability."""
+        att_players = [
+            PlayerFrame(f"att_{i}", "att", (40.0 + i * 2, 20.0 + i * 3), (1.0, 0.0))
+            for i in range(11)
+        ]
+        # Defending team has only 9 outfielders + 1 GK (10 players total)
+        def_players = [
+            PlayerFrame(f"def_{i}", "def", (60.0 + i * 3, 20.0 + i * 3), (-1.0, 0.0))
+            for i in range(9)
+        ] + [PlayerFrame("def_gk", "def", (100.0, 34.0), (0.0, 0.0), is_goalkeeper=True)]
+
+        frame = FrameData(1, 0.04, (55.0, 34.0), (0.0, 0.0), att_players + def_players)
+        res = engine.compute_frame_ppcf(frame, attack_direction=1, apply_offside_mask=True)
+
+        assert res.ppcf_att.shape == (68, 105)
+        assert np.allclose(res.ppcf_att + res.ppcf_def, 1.0, atol=1e-5)
+        assert 0.0 <= res.att_area_pct <= 1.0
+        assert 0.0 <= res.def_area_pct <= 1.0
+
+    def test_out_of_bounds_player_coordinates_robustness(self, engine):
+        """Players outside pitch boundaries (e.g. momentum carry or celebrating) do not crash engine."""
+        players = [
+            PlayerFrame("p_out_left", "att", (-5.0, 34.0), (1.0, 0.0)),
+            PlayerFrame("p_out_top", "def", (50.0, 75.0), (0.0, -1.0)),
+            PlayerFrame("p_gk", "def", (102.0, 34.0), (0.0, 0.0), is_goalkeeper=True),
+        ]
+        frame = FrameData(2, 0.08, (50.0, 34.0), (0.0, 0.0), players)
+        res = engine.compute_frame_ppcf(frame, apply_offside_mask=False)
+
+        assert np.all(np.isfinite(res.ppcf_att))
+        assert np.all(np.isfinite(res.ppcf_def))
+        assert np.allclose(res.ppcf_att + res.ppcf_def, 1.0, atol=1e-5)
+
+    def test_ball_past_last_defender_breakaway(self, engine):
+        """Breakaway scenario: when ball is carried past the deepest defender,
+        offside line is set to the ball position (Law 11)."""
+        def_pos = np.array([
+            [95.0, 34.0],  # GK at 95m
+            [80.0, 25.0],  # 2nd last defender at 80m
+        ])
+        # Striker dribbles ball to x=97m (past GK and all defenders)
+        line_x = engine.calculate_offside_line(
+            def_pos,
+            attack_direction=1,
+            ball_position=(97.0, 34.0),
+        )
+        assert np.isclose(line_x, 97.0), f"Offside line must be at ball position 97.0, got {line_x}"
+
+
