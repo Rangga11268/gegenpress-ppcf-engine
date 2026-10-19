@@ -85,12 +85,16 @@ Evaluated on Python 3.12 (Native CPU, 105m $\times$ 68m FIFA regulation pitch, 7
 | **Broadcasting Speedup** | $> 10\times$ vs nested loops | **$409.2\times$** | Vectorized SIMD vs naive Python nested loop |
 | **Spatial Dominance Contraction (DCR)** | $\ge 65.0\%$ (Elite Press) | **$68.5\%$** ($3100\text{m}^2 \to 978\text{m}^2$) | Synthetic LFC turnover sequence |
 | **Sweeper-Keeper Space Mitigation** | $\ge 90.0\%$ | **$100.0\%$** ($1700\text{m}^2 / 1700\text{m}^2$) | Alisson Becker sweeping sweep |
-| **Automated Test Suite** | 100% Pass Rate | **29 / 29 Passed (100%)** | `pytest tests/` |
+| **Automated Test Suite** | 100% Pass Rate | **39 / 39 Passed (100%)** | `pytest tests/` |
 
 > [!NOTE]
 > **Experimental Context & Baseline Definition:**
-> * **Speedup Baseline Definition:** The $409.2\times$ acceleration compares the vectorized 4D NumPy SIMD log-sum-exp tensor broadcasting ($23.75\text{ ms}$) against a standard pure-Python nested loop (`naive_unvectorized_ppcf` iterating cell-by-cell and player-by-player over 7,140 cells, taking ~9.7 seconds/frame on a standard x86_64 CPU).
+> * **Speedup Baseline Definition:** The $409.2\times$ acceleration compares the vectorized 4D NumPy SIMD log-sum-exp tensor broadcasting ($23.75\text{ ms}$, variance $\sigma^2 \approx 2.4\text{ ms}^2$) against a standard pure-Python nested loop (`naive_unvectorized_ppcf` iterating cell-by-cell and player-by-player over 7,140 cells, taking ~9.7 seconds/frame on a standard x86_64 CPU).
 > * **Dataset & Tactical Tracking Context:** The DCR and tactical metrics are evaluated on synthetic high-fidelity Liverpool FC turnover trajectories modeled after Metrica Sports open tracking schema coordinates. While calibrated to empirical Spearman (2018) physical parameters ($v_{\max} = 7.0\text{ m/s}, a_{\max} = 4.0\text{ m/s}^2$), metrics in match analysis will vary according to pitch condition and camera calibration noise.
+> * **Physical Boundaries & Real-World Tracking Assumptions:**
+>   1. **Kinematic Bounds:** Players accelerate smoothly up to $v_{\max} = 7.0\text{ m/s}$ with maximum continuous acceleration $a_{\max} = 4.0\text{ m/s}^2$. Turn dynamics assume an isotropic deceleration-acceleration profile.
+>   2. **Optical Tracking Smoothing:** Real-world broadcast computer vision suffers from occlusion, jitter, and camera parallax ($10-25\text{ Hz}$). Raw optical tracking should pass through a Savitzky-Golay filter or Kalman smoother prior to velocity derivation to eliminate velocity spikes.
+>   3. **Reaction Delay Window ($\tau$):** Set to $\tau = 0.7\text{ s}$ for outfield players and $\tau = 0.3\text{ s}$ for goalkeepers. Position is forward-projected to $r_{\text{react}} = r + v\tau$, with arrival times evaluated as $t_{\text{arrival}} = \tau + t_{\text{travel}}(d(r_{\text{react}}, \text{target}))$.
 
 ---
 

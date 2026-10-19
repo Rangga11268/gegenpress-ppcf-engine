@@ -139,11 +139,14 @@ def run_benchmark():
         latencies.append((time.perf_counter() - t0) * 1000.0)
 
     median_vec = float(np.median(latencies))
+    std_vec = float(np.std(latencies))
+    var_vec = float(np.var(latencies))
     p95_vec = float(np.percentile(latencies, 95))
     fps = 1000.0 / median_vec
     speedup = extrapolated_naive_full / median_vec
 
     print(f"      Vectorized Median Latency       : {median_vec:.2f} ms")
+    print(f"      Vectorized Variance / StdDev    : {var_vec:.2f} ms² (±{std_vec:.2f} ms)")
     print(f"      Vectorized P95 Latency          : {p95_vec:.2f} ms")
     print(f"      Real-Time Throughput            : {fps:.1f} FPS")
     print(f"      Effective Speedup Ratio         : {speedup:.1f}x")

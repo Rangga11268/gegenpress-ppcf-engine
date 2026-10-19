@@ -70,7 +70,7 @@ def generate_synthetic_turnover_scenario(
         ("opp_w_right", False, [52.0, 56.0], [95.0, 52.0]),
     ]
 
-    duration = (n_frames - 1) * dt
+    duration = max(dt, (n_frames - 1) * dt)
 
     for f_idx in range(n_frames):
         alpha = f_idx / max(1, n_frames - 1)
@@ -118,12 +118,13 @@ def generate_synthetic_turnover_scenario(
                 )
             )
 
+        ball_vel_x = float((ball_end[0] - ball_start[0]) / duration) if duration > 0 else 0.0
         frames.append(
             FrameData(
                 frame_idx=f_idx,
                 timestamp=round(t, 4),
                 ball_position=(float(ball_pos[0]), float(ball_pos[1])),
-                ball_velocity=(float((ball_end[0] - ball_start[0]) / duration), 0.0),
+                ball_velocity=(ball_vel_x, 0.0),
                 players=players,
             )
         )
