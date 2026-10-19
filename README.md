@@ -15,7 +15,7 @@
   <a href="#"><img src="https://img.shields.io/badge/architecture-zero--docker%20%7C%20cross--platform-emerald.svg" alt="Architecture"></a>
 </p>
 
-High-throughput, real-time spatial sports analytics engine modeling elite Gegenpressing tactics and high-defensive-line exposure. Built upon Dr. William Spearman's Potential Pitch Control Field (PPCF) framework (MIT Sloan Sports Analytics Conference, 2018), this engine vectorizes 4D trajectory dynamics via NumPy broadcasting and Poisson survival integration to achieve real-time broadcast throughput (>40 FPS on standard CPUs, 409.2x speedup) without GPU or Docker dependencies.
+High-throughput, real-time spatial sports analytics engine modeling elite Gegenpressing tactics and high-defensive-line exposure. Built upon Dr. William Spearman's Potential Pitch Control Field (PPCF) framework (MIT Sloan Sports Analytics Conference, 2018), this engine vectorizes 4D trajectory dynamics via NumPy broadcasting and Poisson survival integration to achieve real-time broadcast throughput (~37.5 FPS sustained median, >40 FPS burst on standard modern CPUs, 409.2x speedup over scalar loops) without GPU or Docker dependencies.
 
 ![Tactical Pitch Control Showcase](demo_ppcf_anfield.png)
 
