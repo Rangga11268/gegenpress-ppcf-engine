@@ -1,9 +1,18 @@
 """Kinematics and player arrival time computations.
 
 Implements William Spearman's physical arrival model factoring in:
-1. Reaction time latency (tau)
+1. Neuromuscular reaction time latency (tau)
 2. Constant acceleration to maximum sprinting speed
 3. Distance-based piecewise run time
+
+Biomechanical Kinematic Assumptions:
+During the reaction latency interval [t, t + tau], the player cannot instantaneously initiate active
+acceleration toward an arbitrary target point because of sensory-motor processing delay (visual cognition,
+vestibular orientation, neural impulse transmission). As derived in Spearman (2018, Eq. 2), the player's
+trajectory during this delay is modeled by ballistic linear continuation at constant velocity:
+r_react = r + v * tau.
+Active deceleration, turning, and acceleration toward target (x, y) begin exclusively from r_react at t + tau.
+This represents a standard, parsimonious kinematic approximation widely validated across professional football analytics.
 """
 
 from typing import Union
