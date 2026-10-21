@@ -142,7 +142,53 @@ class TestKinematics:
             with pytest.raises(ValueError, match="distances must contain only finite numbers"):
                 compute_player_arrival_time(np.array([bad]), 0.7, DEFAULT_PHYSICS)
 
-            with pytest.raises(ValueError, match="tau must (contain only finite numbers|be a finite number)"):
+            with pytest.raises(ValueError, match="tau must (contain only non-negative finite numbers|be a non-negative finite number)"):
                 compute_player_arrival_time(d, bad, DEFAULT_PHYSICS)
+
+    def test_kinematic_rejects_negative_reaction_time(self):
+        """Negative reaction latency tau is physically impossible and must raise ValueError."""
+        pos = np.array([[50.0, 34.0]])
+        vel = np.array([[4.0, 0.0]])
+        d = np.array([15.0])
+
+        with pytest.raises(ValueError, match="non-negative"):
+            compute_reaction_position(pos, vel, -0.5)
+
+        with pytest.raises(ValueError, match="non-negative"):
+            compute_player_arrival_time(d, -0.7, DEFAULT_PHYSICS)
+
+        with pytest.raises(ValueError, match="non-negative"):
+            compute_player_arrival_time(d, np.array([-0.2]), DEFAULT_PHYSICS)
+
+    def test_physics_config_parameter_validation(self):
+        """PhysicsConfig validates that kinematic constants are strictly positive and finite."""
+        from app.config import PhysicsConfig
+
+        # Zero or negative acceleration
+        with pytest.raises(ValueError, match="strictly positive finite number"):
+            PhysicsConfig(a_max=0.0)
+        with pytest.raises(ValueError, match="strictly positive finite number"):
+            PhysicsConfig(a_max=-2.0)
+
+        # Zero or negative max velocity
+        with pytest.raises(ValueError, match="strictly positive finite number"):
+            PhysicsConfig(v_max=0.0)
+
+        # Non-finite parameter
+        with pytest.raises(ValueError, match="strictly positive finite number"):
+            PhysicsConfig(v_ball=float("inf"))
+
+    def test_ball_travel_time_rejects_non_finite_inputs(self):
+        """compute_ball_travel_time validates that input coordinates are finite numbers."""
+        targets = np.array([[[15.0, 34.0], [30.0, 34.0]]])
+        ball_pos = np.array([0.0, 34.0])
+
+        for bad in [np.nan, np.inf, -np.inf]:
+            with pytest.raises(ValueError, match="contain only finite numbers"):
+                compute_ball_travel_time(np.array([[[bad, 34.0]]]), ball_pos, DEFAULT_PHYSICS)
+
+            with pytest.raises(ValueError, match="contain only finite numbers"):
+                compute_ball_travel_time(targets, np.array([bad, 34.0]), DEFAULT_PHYSICS)
+
 
 

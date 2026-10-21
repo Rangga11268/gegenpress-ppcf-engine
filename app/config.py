@@ -58,6 +58,14 @@ class PhysicsConfig:
     tackle_radius: float = 1.8   # Effective tackle/intercept radius (meters)
     post_turnover_window: float = 3.0  # Spatial dominance collapse window (seconds)
 
+    def __post_init__(self) -> None:
+        import math
+        for field_name in ["a_max", "v_max", "v_ball", "tau_outfield", "tau_goalkeeper", "sigma", "lambda_peak", "horizon_seconds", "dt"]:
+            val = getattr(self, field_name)
+            if not math.isfinite(val) or val <= 0.0:
+                raise ValueError(f"PhysicsConfig parameter '{field_name}' must be a strictly positive finite number, got {val}")
+
+
 
 DEFAULT_PITCH = PitchConfig()
 DEFAULT_PHYSICS = PhysicsConfig()

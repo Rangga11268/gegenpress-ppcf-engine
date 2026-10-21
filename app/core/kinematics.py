@@ -46,10 +46,10 @@ def compute_reaction_position(
     if not np.all(np.isfinite(positions)) or not np.all(np.isfinite(velocities)):
         raise ValueError("positions and velocities must contain only finite numbers")
     if isinstance(tau, np.ndarray):
-        if not np.all(np.isfinite(tau)):
-            raise ValueError("tau must contain only finite numbers")
-    elif not np.isfinite(tau):
-        raise ValueError("tau must be a finite number")
+        if not np.all(np.isfinite(tau)) or np.any(tau < 0.0):
+            raise ValueError("tau must contain only non-negative finite numbers")
+    elif not np.isfinite(tau) or tau < 0.0:
+        raise ValueError("tau must be a non-negative finite number")
 
     if isinstance(tau, np.ndarray) and tau.ndim < positions.ndim:
         # Broadcast tau to match (..., 2)
@@ -92,10 +92,10 @@ def compute_player_arrival_time(
     if not np.all(np.isfinite(distances)):
         raise ValueError("distances must contain only finite numbers")
     if isinstance(tau, np.ndarray):
-        if not np.all(np.isfinite(tau)):
-            raise ValueError("tau must contain only finite numbers")
-    elif not np.isfinite(tau):
-        raise ValueError("tau must be a finite number")
+        if not np.all(np.isfinite(tau)) or np.any(tau < 0.0):
+            raise ValueError("tau must contain only non-negative finite numbers")
+    elif not np.isfinite(tau) or tau < 0.0:
+        raise ValueError("tau must be a non-negative finite number")
 
     # Guard against negative distances
     d = np.maximum(0.0, distances)
@@ -141,6 +141,8 @@ def compute_ball_travel_time(
     np.ndarray
         Travel time array of shape (N_y, N_x) in seconds.
     """
+    if not np.all(np.isfinite(target_coords)) or not np.all(np.isfinite(ball_position)):
+        raise ValueError("target_coords and ball_position must contain only finite numbers")
     diff = target_coords - ball_position  # (N_y, N_x, 2)
     dist = np.linalg.norm(diff, axis=-1)   # (N_y, N_x)
     return dist / max(0.1, cfg.v_ball)
