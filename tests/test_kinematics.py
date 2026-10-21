@@ -104,3 +104,45 @@ class TestKinematics:
         assert np.isclose(t_arr[0], 0.7)
         assert np.isclose(t_arr[1], 0.7)
 
+    def test_kinematic_sensitivity_reaction_latency(self):
+        """Sensitivity of arrival time to reaction latency tau: d(t_arr)/d(tau) == 1.0."""
+        d = np.array([12.0])
+        taus = np.linspace(0.2, 1.2, 6)
+        times = [float(compute_player_arrival_time(d, tau, DEFAULT_PHYSICS)[0]) for tau in taus]
+        slopes = np.diff(times) / np.diff(taus)
+        assert np.allclose(slopes, 1.0, atol=1e-6)
+
+    def test_kinematic_sensitivity_acceleration_and_velocity(self):
+        """Higher acceleration and maximum speed monotonically decrease arrival times."""
+        from app.config import PhysicsConfig
+
+        d_long = np.array([30.0])
+        tau = 0.7
+
+        # Vary acceleration a_max
+        t_low_a = float(compute_player_arrival_time(d_long, tau, PhysicsConfig(a_max=2.0, v_max=8.0))[0])
+        t_high_a = float(compute_player_arrival_time(d_long, tau, PhysicsConfig(a_max=5.0, v_max=8.0))[0])
+        assert t_high_a < t_low_a
+
+        # Vary maximum speed v_max
+        t_low_v = float(compute_player_arrival_time(d_long, tau, PhysicsConfig(a_max=4.0, v_max=6.0))[0])
+        t_high_v = float(compute_player_arrival_time(d_long, tau, PhysicsConfig(a_max=4.0, v_max=10.0))[0])
+        assert t_high_v < t_low_v
+
+    def test_kinematic_rejects_non_finite_inputs(self):
+        """Verify compute_reaction_position and compute_player_arrival_time reject NaN and Inf."""
+        pos = np.array([[50.0, 34.0]])
+        vel = np.array([[4.0, 0.0]])
+        d = np.array([15.0])
+
+        for bad in [np.nan, np.inf, -np.inf]:
+            with pytest.raises(ValueError, match="positions and velocities must contain only finite numbers"):
+                compute_reaction_position(np.array([[bad, 34.0]]), vel, 0.7)
+
+            with pytest.raises(ValueError, match="distances must contain only finite numbers"):
+                compute_player_arrival_time(np.array([bad]), 0.7, DEFAULT_PHYSICS)
+
+            with pytest.raises(ValueError, match="tau must (contain only finite numbers|be a finite number)"):
+                compute_player_arrival_time(d, bad, DEFAULT_PHYSICS)
+
+

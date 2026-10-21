@@ -43,10 +43,19 @@ def compute_reaction_position(
     np.ndarray
         Projected reaction positions of shape (..., 2).
     """
+    if not np.all(np.isfinite(positions)) or not np.all(np.isfinite(velocities)):
+        raise ValueError("positions and velocities must contain only finite numbers")
+    if isinstance(tau, np.ndarray):
+        if not np.all(np.isfinite(tau)):
+            raise ValueError("tau must contain only finite numbers")
+    elif not np.isfinite(tau):
+        raise ValueError("tau must be a finite number")
+
     if isinstance(tau, np.ndarray) and tau.ndim < positions.ndim:
         # Broadcast tau to match (..., 2)
         tau = np.expand_dims(tau, axis=-1)
     return positions + velocities * tau
+
 
 
 def compute_player_arrival_time(
@@ -79,6 +88,14 @@ def compute_player_arrival_time(
     """
     d_accel = (cfg.v_max ** 2) / (2.0 * cfg.a_max)
     t_accel = cfg.v_max / cfg.a_max
+
+    if not np.all(np.isfinite(distances)):
+        raise ValueError("distances must contain only finite numbers")
+    if isinstance(tau, np.ndarray):
+        if not np.all(np.isfinite(tau)):
+            raise ValueError("tau must contain only finite numbers")
+    elif not np.isfinite(tau):
+        raise ValueError("tau must be a finite number")
 
     # Guard against negative distances
     d = np.maximum(0.0, distances)
