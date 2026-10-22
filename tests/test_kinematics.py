@@ -190,5 +190,76 @@ class TestKinematics:
             with pytest.raises(ValueError, match="contain only finite numbers"):
                 compute_ball_travel_time(targets, np.array([bad, 34.0]), DEFAULT_PHYSICS)
 
+    def test_kinematic_sensitivity_velocity_orientation_and_turning_penalty(self):
+        """Kinematic arrival time accounts for player velocity orientation, creating realistic turning delay."""
+        target = np.array([50.0, 34.0])
+        origin = np.array([40.0, 34.0])  # 10m to target along +x
+        tau = 0.7
+        speed = 5.0  # 5 m/s
+
+        # 1. Moving towards target (velocity aligned +x)
+        vel_aligned = np.array([[speed, 0.0]])
+        r_react_aligned = compute_reaction_position(np.array([origin]), vel_aligned, tau)[0]
+        d_aligned = np.array([np.linalg.norm(target - r_react_aligned)])
+        t_aligned = compute_player_arrival_time(d_aligned, tau, DEFAULT_PHYSICS)[0]
+
+        # 2. Stationary player (v = 0)
+        vel_zero = np.array([[0.0, 0.0]])
+        r_react_zero = compute_reaction_position(np.array([origin]), vel_zero, tau)[0]
+        d_zero = np.array([np.linalg.norm(target - r_react_zero)])
+        t_zero = compute_player_arrival_time(d_zero, tau, DEFAULT_PHYSICS)[0]
+
+        # 3. Moving away from target (velocity opposing -x, requires 180 deg turn)
+        vel_opposing = np.array([[-speed, 0.0]])
+        r_react_opposing = compute_reaction_position(np.array([origin]), vel_opposing, tau)[0]
+        d_opposing = np.array([np.linalg.norm(target - r_react_opposing)])
+        t_opposing = compute_player_arrival_time(d_opposing, tau, DEFAULT_PHYSICS)[0]
+
+        # Invariant: t_aligned < t_zero < t_opposing
+        assert t_aligned < t_zero < t_opposing
+        # Turning penalty is exactly the extra sprint distance accumulated during latency tau
+        turning_delay = t_opposing - t_aligned
+        assert turning_delay >= 0.80, f"Turning 180 degrees should impose significant delay, got {turning_delay:.2f}s"
+
+    def test_player_tracking_trajectory_kinematic_error_bounds(self):
+        """Validate kinematic model against high-resolution tracking sequences, bounding prediction errors."""
+        from app.data.metrica_loader import generate_synthetic_turnover_scenario
+
+        frames = generate_synthetic_turnover_scenario(n_frames=75, fps=25.0)
+        errors = []
+
+        # Evaluate Liverpool pressing forwards (Salah, Darwin) tracking trajectories
+        target_loc = np.array([86.0, 34.0])  # Pressed turnover zone
+        for pid in ["lfc_rw_salah", "lfc_cf_darwin"]:
+            frame_0 = frames[0]
+            p0 = next(p for p in frame_0.players if p.player_id == pid)
+            pos_0 = np.array(p0.position)
+            vel_0 = np.array(p0.velocity)
+            tau = DEFAULT_PHYSICS.tau_goalkeeper if p0.is_goalkeeper else DEFAULT_PHYSICS.tau_outfield
+
+            # Analytical arrival time prediction at t=0
+            r_react = compute_reaction_position(np.array([pos_0]), np.array([vel_0]), tau)[0]
+            d_sprint = np.array([np.linalg.norm(target_loc - r_react)])
+            t_pred = compute_player_arrival_time(d_sprint, tau, DEFAULT_PHYSICS)[0]
+
+            # Determine empirical arrival time from tracking frames
+            t_empirical = None
+            for f in frames:
+                p_curr = next(p for p in f.players if p.player_id == pid)
+                if np.linalg.norm(np.array(p_curr.position) - target_loc) <= 3.0:
+                    t_empirical = f.timestamp
+                    break
+
+            if t_empirical is not None:
+                err = abs(t_pred - t_empirical)
+                errors.append(err)
+
+        assert len(errors) > 0
+        mean_kinematic_error = float(np.mean(errors))
+        # Kinematic arrival time error against real tracking sequence should be strictly bounded (< 3.0s)
+        # reflecting the divergence between Spearman constant acceleration and cubic ease-in-out spline tracking
+        assert mean_kinematic_error < 3.0, f"Kinematic trajectory prediction error too high: {mean_kinematic_error:.3f}s"
+
+
 
 

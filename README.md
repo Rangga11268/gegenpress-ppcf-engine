@@ -86,7 +86,7 @@ Evaluated on Python 3.12 (Native CPU, 105m $\times$ 68m FIFA regulation pitch, 7
 | **Numerical Parity (MAE)** | $< 10^{-4}$ vs Reference | **$2.27 \times 10^{-18}$** (Max: $4.44 \times 10^{-16}$) | Automated parity audit against Spearman loop |
 | **Spatial Dominance Contraction (DCR)** | $\ge 65.0\%$ (Elite Press) | **$68.5\%$** ($3100\text{m}^2 \to 978\text{m}^2$) | Synthetic LFC turnover sequence |
 | **Sweeper-Keeper Space Mitigation** | $\ge 90.0\%$ | **$100.0\%$** ($1700\text{m}^2 / 1700\text{m}^2$) | Alisson Becker sweeping sweep |
-| **Automated Test Suite** | 100% Pass Rate | **51 / 51 Passed (100%)** | `pytest tests/` (kinematics, PPCF, Law 11, edge cases) |
+| **Automated Test Suite** | 100% Pass Rate | **53 / 53 Passed (100%)** | `pytest tests/` (kinematics, PPCF, Law 11, edge cases) |
 
 > [!NOTE]
 > **Experimental Context & Baseline Definition:**
